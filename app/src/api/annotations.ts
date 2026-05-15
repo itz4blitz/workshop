@@ -1,7 +1,7 @@
 import { apiJson, jsonInit } from "./request";
 
 export type AnnotationKind = "issue" | "good" | "note";
-export type AnnotationSource = "user" | "claude-code" | "codex";
+export type AnnotationSource = "user" | "claude-code" | "codex" | "copilot";
 
 export interface Annotation {
   id: string;

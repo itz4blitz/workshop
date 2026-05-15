@@ -44,8 +44,8 @@ That's it. Traces stream into the UI the moment your agent runs.
 
 - **Live streamed traces.** Every token, tool call, and span streams into
   Workshop as it happens. No polling, no refreshing.
-- **Coding-agent integration.** Claude Code reads your traces, writes evals
-  against your codebase, and fixes what's broken.
+- **Coding-agent integration.** Claude Code, Codex, and GitHub Copilot CLI read
+  your traces, write evals against your codebase, and fix what's broken.
 - **Self-healing eval loop.** Claude writes the eval, runs your agent, sees the
   failure, fixes the code, and re-runs — until every assertion passes.
 - **Local replay.** `/setup-agent-replay` scaffolds an HTTP endpoint that replays a
@@ -58,7 +58,7 @@ That's it. Traces stream into the UI the moment your agent runs.
   LangChain, LangGraph, CrewAI, Mastra, Pydantic AI, DSPy, Google ADK, Strands,
   Agno, Deep Agents
 - **Providers:** AWS Bedrock, Azure OpenAI, Vertex AI
-- **Coding agents:** Claude Code, Codex, Devin, Cursor, OpenCode
+- **Coding agents:** Claude Code, Codex, GitHub Copilot CLI, Devin, Cursor, OpenCode
 
 ## Configuration
 

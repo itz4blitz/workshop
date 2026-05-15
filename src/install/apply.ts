@@ -112,9 +112,20 @@ function resolveMcpServerConfig(
 }
 
 function assertFullSupport(agent: InstallAgentId, scope: "global" | "local"): asserts agent is SkillAgentType {
-  if (!isSkillAgentType(agent) || (!isMcpAgentType(agent) && !supportsCustomMcpAgent(agent, scope))) {
+  if (
+    !isSkillAgentType(skillAgentFor(agent)) ||
+    (!isMcpAgentType(mcpAgentFor(agent)) && !supportsCustomMcpAgent(mcpAgentFor(agent), scope))
+  ) {
     throw new Error(`install: ${agent} does not support both Raindrop skills and MCP`);
   }
+}
+
+function skillAgentFor(agent: InstallAgentId): SkillAgentType {
+  return (agent === "github-copilot-cli" ? "github-copilot" : agent) as SkillAgentType;
+}
+
+function mcpAgentFor(agent: InstallAgentId): InstallAgentId {
+  return agent;
 }
 
 export async function applyInstallPlan(
@@ -130,20 +141,22 @@ export async function applyInstallPlan(
     assertFullSupport(item.agent, item.scope);
     const isGlobal = item.scope === "global";
     const cwd = item.cwd ?? process.cwd();
+    const skillAgent = skillAgentFor(item.agent);
+    const mcpAgent = mcpAgentFor(item.agent);
 
     const skills = await installSkillsFromSource({
       source: bundle.skillsDir,
-      agents: [item.agent],
+      agents: [skillAgent],
       global: isGlobal,
       cwd,
       mode: "symlink",
     });
-    const mcp = isMcpAgentType(item.agent)
-      ? installMcpServerForAgent("raindrop", mcpConfig, item.agent, {
+    const mcp = isMcpAgentType(mcpAgent)
+      ? installMcpServerForAgent("raindrop", mcpConfig, mcpAgent, {
           global: isGlobal,
           cwd,
         })
-      : installCustomMcpServerForAgent("raindrop", mcpConfig, item.agent, item.scope);
+      : installCustomMcpServerForAgent("raindrop", mcpConfig, mcpAgent, item.scope);
 
     results.push({
       agent: item.agent,

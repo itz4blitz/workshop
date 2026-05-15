@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent 
 import claudeCodeLogo from "../assets/claude-code-logo.png";
 import codexLogo from "../assets/codex-logo.svg";
 import { useWorkshopEvent } from "../hooks/use-workshop-ws";
-import { isAgentProvider, providerLabel, type AgentProviderId } from "../utils/agent-provider";
+import { AGENT_PROVIDER_IDS, isAgentProvider, providerLabel, type AgentProviderId } from "../utils/agent-provider";
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { Markdown } from "./Markdown";
 import { RaindropLogo } from "./RaindropLogo";
@@ -69,12 +69,14 @@ interface ClaudeMessageStream {
 type AgentStreamEvent =
   | { type: "text"; content: string }
   | ({ type: "loadout" } & AgentLoadout)
+  | { type: "status"; content: string }
   | { type: "error"; content: string }
   | { type: "tool_start"; id: string; name: string; input_preview?: string }
   | { type: "tool_finish"; id: string; ok: boolean; output_preview?: string }
   | { type: "thinking_delta"; content: string }
   | { type: "subagent_start"; parent_id: string; subagent: string }
   | { type: "provider_session"; sessionId: string }
+  | { type: "usage"; input_tokens?: number; output_tokens?: number; cost_usd?: number }
   | { type: "done" };
 
 interface AgentLoadout {
@@ -909,7 +911,7 @@ function FloatingAskButton({ provider, onOpen }: { provider: AgentProviderId; on
         title={`Ask ${providerLabel(provider)}`}
       >
         <Terminal className="h-4 w-4 text-zinc-950" />
-        <span>Ask Claude Code</span>
+        <span>Ask {providerLabel(provider)}</span>
       </button>
     </div>
   );
@@ -930,6 +932,13 @@ function ProviderMark({ provider, open }: { provider: AgentProviderId; open: boo
   if (provider === "claude") {
     return <img src={claudeCodeLogo} alt="" className={`h-8 w-8 object-contain ${open ? "" : "opacity-80"}`} />;
   }
+  if (provider === "copilot") {
+    return (
+      <span className={`grid h-8 w-8 place-items-center rounded-full bg-white/10 text-[10px] font-semibold text-white ${open ? "" : "opacity-80"}`}>
+        GH
+      </span>
+    );
+  }
   return (
     <span className="grid h-8 w-8 place-items-center rounded-full bg-white shadow-[0_0_24px_rgba(255,255,255,0.12)]">
       <img src={codexLogo} alt="" className="h-7 w-7 object-contain" />
@@ -940,13 +949,17 @@ function ProviderMark({ provider, open }: { provider: AgentProviderId; open: boo
 function SmallProviderIcon({ provider }: { provider: AgentProviderId }) {
   return provider === "claude"
     ? <img src={claudeCodeLogo} alt="" className="h-4 w-4 object-contain brightness-0 invert" />
-    : <img src={codexLogo} alt="" className="h-4 w-4 object-contain invert" />;
+    : provider === "copilot"
+      ? <span className="grid h-4 w-4 place-items-center rounded-full bg-white/10 text-[8px] font-semibold text-white">GH</span>
+      : <img src={codexLogo} alt="" className="h-4 w-4 object-contain invert" />;
 }
 
 function LargeProviderIcon({ provider }: { provider: AgentProviderId }) {
   return provider === "claude"
     ? <img src={claudeCodeLogo} alt="" className="h-7 w-7 object-contain brightness-0 invert" />
-    : <img src={codexLogo} alt="" className="h-7 w-7 object-contain invert" />;
+    : provider === "copilot"
+      ? <span className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-[10px] font-semibold text-white">GH</span>
+      : <img src={codexLogo} alt="" className="h-7 w-7 object-contain invert" />;
 }
 
 function ProviderDropdown({
@@ -984,7 +997,7 @@ function ProviderDropdown({
       </button>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 min-w-44 rounded-lg border border-white/10 bg-zinc-900/95 p-1 text-xs shadow-2xl backdrop-blur">
-          {(["claude", "codex"] as AgentProviderId[]).map((option) => (
+          {AGENT_PROVIDER_IDS.map((option) => (
             <button
               key={option}
               type="button"
@@ -1010,6 +1023,14 @@ function ProviderDropdown({
 function ProviderThinking({ provider }: { provider: AgentProviderId }) {
   if (provider === "claude") {
     return <div className="text-xs text-white/40">Claude Code is thinking...</div>;
+  }
+  if (provider === "copilot") {
+    return (
+      <div className="flex items-center gap-2 text-xs text-white/45">
+        <span className="grid h-6 w-6 animate-pulse place-items-center rounded-full bg-white/10 text-[9px] font-semibold text-white">GH</span>
+        <span>GitHub Copilot CLI is working...</span>
+      </div>
+    );
   }
   return (
     <div className="flex items-center gap-2 text-xs text-white/45">
@@ -1402,8 +1423,8 @@ function AgentConnectCard({
       <p className="mx-auto mt-2 max-w-[300px] text-sm leading-relaxed text-white/48">
         Ask questions about traces and resume chats from your terminal.
       </p>
-      <div className="mt-5 grid grid-cols-2 gap-1.5 rounded-xl border border-white/10 bg-black/15 p-1">
-        {(["claude", "codex"] as AgentProviderId[]).map((option) => {
+      <div className="mt-5 grid grid-cols-3 gap-1.5 rounded-xl border border-white/10 bg-black/15 p-1">
+        {AGENT_PROVIDER_IDS.map((option) => {
           const active = selectedProvider === option;
           return (
             <button
@@ -1532,7 +1553,11 @@ function formatCwdDisplay(cwd: string | null): string {
 
 function resumeCommandForSession(session: ClaudeSessionSummary, workspaceCwd: string | null, provider: AgentProviderId = "claude"): string {
   const cwd = session.cwd ?? workspaceCwd;
-  const resume = provider === "codex" ? `codex resume ${session.id}` : `claude --resume ${session.id}`;
+  const resume = provider === "codex"
+    ? `codex resume ${session.id}`
+    : provider === "copilot"
+      ? `copilot --resume ${session.id}`
+      : `claude --resume ${session.id}`;
   return cwd
     ? `cd ${shellQuote(cwd)} && ${resume}`
     : resume;
