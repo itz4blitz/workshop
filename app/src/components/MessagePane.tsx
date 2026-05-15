@@ -1417,13 +1417,18 @@ function AgentConnectCard({
   onSelectedProviderChange: (provider: AgentProviderId) => void;
   onProviderChange: (provider: AgentProviderId) => void;
 }) {
+  const gridColsClass = AGENT_PROVIDER_IDS.length >= 4
+    ? "grid-cols-2"
+    : AGENT_PROVIDER_IDS.length === 3
+      ? "grid-cols-3"
+      : "grid-cols-2";
   return (
     <section className="w-full max-w-[340px] text-center">
       <div className="text-[18px] font-medium text-white/90">Connect your coding agent</div>
       <p className="mx-auto mt-2 max-w-[300px] text-sm leading-relaxed text-white/48">
         Ask questions about traces and resume chats from your terminal.
       </p>
-      <div className="mt-5 grid grid-cols-3 gap-1.5 rounded-xl border border-white/10 bg-black/15 p-1">
+      <div className={`mt-5 grid ${gridColsClass} gap-1.5 rounded-xl border border-white/10 bg-black/15 p-1`}>
         {AGENT_PROVIDER_IDS.map((option) => {
           const active = selectedProvider === option;
           return (

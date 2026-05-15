@@ -481,6 +481,12 @@ export async function createServer(port: number) {
     });
   });
 
+  function sessionDetailForProvider(cwd: string, provider: AgentProviderId, sessionId: string) {
+    if (provider === "claude") return getClaudeSession(cwd, sessionId);
+    if (provider === "copilot") return getCopilotSession(cwd, sessionId);
+    return getCodexSession(cwd, sessionId);
+  }
+
   // CORS for the ingestion routes browser SDKs actually post to —
   // narrower than `/v1/*` so future routes under that prefix don't
   // inherit cross-origin access by default.
@@ -1293,11 +1299,7 @@ export async function createServer(port: number) {
         text,
         events,
         session: providerSessionId
-          ? requestProvider === "claude"
-            ? getClaudeSession(workspace.cwd, providerSessionId)
-            : requestProvider === "copilot"
-              ? getCopilotSession(workspace.cwd, providerSessionId)
-              : getCodexSession(workspace.cwd, providerSessionId)
+          ? sessionDetailForProvider(workspace.cwd, requestProvider, providerSessionId)
           : null,
       });
     } catch (err) {
