@@ -17,7 +17,7 @@ export const KIND_STYLES: Record<
 export const SOURCE_GLYPH: Record<Annotation["source"], string> = {
   "claude-code": "◆",
   codex: "›",
-  copilot: "CP",
+  copilot: "✦",
   user: "·",
 };
 

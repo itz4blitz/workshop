@@ -24,9 +24,12 @@ export function listCopilotSessions(cwd: string): ClaudeSessionSummary[] {
 
 export function getCopilotSession(cwd: string, sessionId: string): ClaudeSessionDetail | null {
   if (!/^[A-Za-z0-9_-]+$/.test(sessionId)) return null;
-  const dir = path.join(copilotStateDir(), sessionId);
-  const session = readCopilotSessionDir(dir);
-  return session?.cwd === cwd && session.id === sessionId ? session : null;
+  for (const dir of copilotSessionDirs()) {
+    if (path.basename(dir) !== sessionId) continue;
+    const session = readCopilotSessionDir(dir);
+    if (session?.cwd === cwd && session.id === sessionId) return session;
+  }
+  return null;
 }
 
 function copilotSessionDirs(): string[] {
@@ -44,10 +47,15 @@ function copilotSessionDirs(): string[] {
 }
 
 function readCopilotSessionDir(dir: string): ClaudeSessionDetail | null {
-  const filePath = path.join(dir, "events.jsonl");
+  const stateDir = path.resolve(copilotStateDir());
+  const resolvedDir = path.resolve(dir);
+  const relative = path.relative(stateDir, resolvedDir);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return null;
+
+  const filePath = path.join(resolvedDir, "events.jsonl");
   if (!fs.existsSync(filePath)) return null;
 
-  let id = path.basename(dir);
+  let id = path.basename(resolvedDir);
   let cwd = "";
   let createdAt: string | null = null;
   let updatedAt: string | null = null;
